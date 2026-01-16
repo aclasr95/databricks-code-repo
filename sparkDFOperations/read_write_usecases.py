@@ -295,6 +295,7 @@ display(usage_True_df)
 
 # COMMAND ----------
 
+# DBTITLE 1,Write DataFrames to Delta format
 customer_path = "/Volumes/telecom_catalog_assign/landing_zone/landing_vol/customer/customer.csv"
 usage_path = "/Volumes/telecom_catalog_assign/landing_zone/landing_vol/usage/usage.csv"
 
@@ -341,4 +342,353 @@ tower_df.printSchema()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 6. More to come (stay motivated)....
+# MAGIC ## Spark Write Operations using 
+# MAGIC - csv, json, orc, parquet, delta, saveAsTable, insertInto, xml with different write mode, header and sep options
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##6. Write Operations (Data Conversion/Schema migration) – CSV Format Usecases
+# MAGIC 1. Write customer data into CSV format using overwrite mode
+# MAGIC 2. Write usage data into CSV format using append mode
+# MAGIC 3. Write tower data into CSV format with header enabled and custom separator (|)
+# MAGIC 4. Read the tower data in a dataframe and show only 5 rows.
+# MAGIC 5. Download the file into local from the catalog volume location and see the data of any of the above files opening in a notepad++.
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC --creating a volumn to store converted files
+# MAGIC create volume if not exists telecom_catalog_assign.landing_zone.conversion_vol
+
+# COMMAND ----------
+
+#customer df in csv in overwrite mode
+cust_df.write.format('csv').mode('overwrite').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/custdata')
+display(spark.read.format('csv').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/custdata'))
+
+# COMMAND ----------
+
+#usage data in csv with append mode
+usage_df.write.format('csv').mode('append').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/usageData')
+
+
+# COMMAND ----------
+
+display(spark.read.format('csv').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/usageData'))
+
+# COMMAND ----------
+
+#tower df with |seperator
+tower_df.write.format('csv').mode('overwrite').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/towerdata_csv',sep='|')
+
+# COMMAND ----------
+
+display(spark.read.format('csv').option('delimiter','|').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/towerdata_csv'))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##7. Write Operations (Data Conversion/Schema migration)– JSON Format Usecases
+# MAGIC 1. Write customer data into JSON format using overwrite mode
+# MAGIC 2. Write usage data into JSON format using append mode and snappy compression format
+# MAGIC 3. Write tower data into JSON format using ignore mode and observe the behavior of this mode
+# MAGIC 4. Read the tower data in a dataframe and show only 5 rows.
+# MAGIC 5. Download the file into local harddisk from the catalog volume location and see the data of any of the above files opening in a notepad++.
+
+# COMMAND ----------
+
+#costomer in json -> in overwrite mode
+cust_df.write.format('json').mode('overwrite').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/json/cutomer_json')
+
+
+# COMMAND ----------
+
+#uasgedf in json with snappy compresson and append mode
+usage_df.write.mode('append').format('json').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/json/usage_json',compression='snappy')
+
+# COMMAND ----------
+
+display(spark.read.format('json').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/json/usage_json'))
+
+# COMMAND ----------
+
+#tower_df write with ignore mode
+tower_df.write.mode('ignore').format('json').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/json/tower_json')
+display(spark.read.format('json').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/json/tower_json/').limit(5))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##8. Write Operations (Data Conversion/Schema migration) – Parquet Format Usecases
+# MAGIC 1. Write customer data into Parquet format using overwrite mode and in a gzip format
+# MAGIC 2. Write usage data into Parquet format using error mode
+# MAGIC 3. Write tower data into Parquet format with gzip compression option
+# MAGIC 4. Read the usage data in a dataframe and show only 5 rows.
+# MAGIC 5. Download the file into local harddisk from the catalog volume location and see the data of any of the above files opening in a notepad++.
+
+# COMMAND ----------
+
+cust_df.write.mode('overwrite').format('parquet').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/parquet/customer')
+
+# COMMAND ----------
+
+usage_df.write.mode('append').format('parquet').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/parquet/usage')
+
+# COMMAND ----------
+
+tower_df.write.mode('ignore').format('parquet').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/parquet/tower',compression='gzip')
+
+# COMMAND ----------
+
+display(spark.read.format('parquet').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/parquet/tower'))
+
+# COMMAND ----------
+
+usage_df.show(5)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##9. Write Operations (Data Conversion/Schema migration) – Orc Format Usecases
+# MAGIC 1. Write customer data into ORC format using overwrite mode
+# MAGIC 2. Write usage data into ORC format using append mode
+# MAGIC 3. Write tower data into ORC format and see the output file structure
+# MAGIC 4. Read the usage data in a dataframe and show only 5 rows.
+# MAGIC 5. Download the file into local harddisk from the catalog volume location and see the data of any of the above files opening in a notepad++.
+
+# COMMAND ----------
+
+cust_df.write.mode('overwrite').format('orc').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/orc/customer')
+usage_df.write.mode('append').format('orc').option('compression','snappy').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/orc/usage')
+tower_df.write.mode('append').format('orc').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/orc/tower')
+spark.read.format('orc').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/orc/usage').show(5)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##10. Write Operations (Data Conversion/Schema migration) – Delta Format Usecases
+# MAGIC 1. Write customer data into Delta format using overwrite mode
+# MAGIC 2. Write usage data into Delta format using append mode
+# MAGIC 3. Write tower data into Delta format and see the output file structure
+# MAGIC 4. Read the usage data in a dataframe and show only 5 rows.
+# MAGIC 5. Download the file into local harddisk from the catalog volume location and see the data of any of the above files opening in a notepad++.
+# MAGIC 6. Compare the parquet location and delta location and try to understand what is the differentiating factor, as both are parquet files only.
+
+# COMMAND ----------
+
+#doing this since in delta format it wont allow spaces or special charectors in the table header
+cust_df=cust_df.withColumnRenamed("Customer Id","CustomerId")\
+                .withColumnRenamed("Plan Type","PlanType")
+cust_df.display()
+
+# COMMAND ----------
+
+cust_df.write.mode('overwrite').format('delta').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/delta/customer')
+usage_df.write.mode('append').format('delta').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/delta/usage')
+tower_df.write.mode('ignore').format('delta').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/delta/tower')
+spark.read.format('delta').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/delta/usage')
+
+# COMMAND ----------
+
+spark.read.format('delta').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/delta/usage').show(5)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##11. Write Operations (Lakehouse Usecases) – Delta table Usecases
+# MAGIC 1. Write customer data using saveAsTable() as a managed table
+# MAGIC 2. Write usage data using saveAsTable() with overwrite mode
+# MAGIC 3. Drop the managed table and verify data removal
+# MAGIC 4. Go and check the table overview and realize it is in delta format in the Catalog.
+# MAGIC 5. Use spark.read.sql to write some simple queries on the above tables created.
+# MAGIC
+
+# COMMAND ----------
+
+cust_df.write.mode('overwrite').format('delta').saveAsTable('telecom_catalog_assign.landing_zone.customer')
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from telecom_catalog_assign.landing_zone.customer
+
+# COMMAND ----------
+
+usage_df.write.mode('append').format('delta').saveAsTable('telecom_catalog_assign.landing_zone.usage')
+
+# COMMAND ----------
+
+usage_df.printSchema()
+
+# COMMAND ----------
+
+ spark.sql('select * from telecom_catalog_assign.landing_zone.usage where customer_id=101').show(10)
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from telecom_catalog_assign.landing_zone.usage
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC drop table telecom_catalog_assign.landing_zone.usage
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##12. Write Operations (Lakehouse Usecases) – Delta table Usecases
+# MAGIC 1. Write customer data using insertInto() in a new table and find the behavior
+# MAGIC 2. Write usage data using insertTable() with overwrite mode
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CREATE OR REPLACE TABLE telecom_catalog_assign.landing_zone.customer_new (
+# MAGIC   CustomerId INT,
+# MAGIC   Name STRING,
+# MAGIC   Age STRING,
+# MAGIC   CityPlanType STRING   
+# MAGIC );
+# MAGIC CREATE OR REPLACE TABLE telecom_catalog_assign.landing_zone.usage_new (
+# MAGIC   customer_id INT,
+# MAGIC   voice_mins INT,
+# MAGIC   data_mb INT,
+# MAGIC   sms_count INT   
+# MAGIC )
+
+# COMMAND ----------
+
+cust_df.write.option("mergeSchema", "true").insertInto("telecom_catalog_assign.landing_zone.customer_new")
+
+# COMMAND ----------
+
+spark.sql('select * from telecom_catalog_assign.landing_zone.customer_new').printSchema()
+
+# COMMAND ----------
+
+usage_df.write.mode("overwrite").insertInto("telecom_catalog_assign.landing_zone.usage_new")
+
+# COMMAND ----------
+
+spark.sql('select * from telecom_catalog_assign.landing_zone.usage_new').show()
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##13. Write Operations (Lakehouse Usecases) – Delta table Usecases
+# MAGIC 1. Write customer data into XML format using rowTag as cust
+# MAGIC 2. Write usage data into XML format using overwrite mode with the rowTag as usage
+# MAGIC 3. Download the xml data and open the file in notepad++ and see how the xml file looks like.
+
+# COMMAND ----------
+
+cust_df.write.mode('append').format('xml').option('rowTag','cust').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/xmlfile/custxml')
+
+# COMMAND ----------
+
+usage_df.write.mode('overwrite').format('xml').option('rowTag','usage').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/xmlfile/usage')
+
+# COMMAND ----------
+
+spark.read.format('xml').option('rowTag','usage').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/xmlfile/usage').show(10)
+spark.read.format('xml').option('rowTag','cust').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/xmlfile/custxml').show(10)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##14. Compare all the downloaded files (csv, json, orc, parquet, delta and xml) 
+# MAGIC 1. Capture the size occupied between all of these file formats and list the formats below based on the order of size from small to big.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ###15. Try to do permutation and combination of performing Schema Migration & Data Conversion operations like...
+# MAGIC 1. Read any one of the above orc data in a dataframe and write it to dbfs in a parquet format
+# MAGIC 2. Read any one of the above parquet data in a dataframe and write it to dbfs in a delta format
+# MAGIC 3. Read any one of the above delta data in a dataframe and write it to dbfs in a xml format
+# MAGIC 4. Read any one of the above delta table in a dataframe and write it to dbfs in a json format
+# MAGIC 5. Read any one of the above delta table in a dataframe and write it to another table
+
+# COMMAND ----------
+
+spark.read.format('orc').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/orc/customer/').\
+    write.mode('overwrite').format('parquet').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/perStorage/parkdata')
+
+# COMMAND ----------
+
+spark.read.format('parquet').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/parquet/customer/').\
+    withColumnRenamed('Customer Id','CustomerId').withColumnRenamed('Plan Type','PlanType').write.mode('overwrite').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/perStorage/deltadata')
+
+# COMMAND ----------
+
+spark.read.format('delta').load('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/perStorage/deltadata').write.mode('overwrite').format('xml').option('rowTag','customer').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/perStorage/xmldatfromdelta')
+
+# COMMAND ----------
+
+spark.sql('select * from telecom_catalog_assign.landing_zone.customer_new').write.mode('overwrite').format('json').save('/Volumes/telecom_catalog_assign/landing_zone/conversion_vol/perStorage/jsonfromdelta')
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from telecom_catalog_assign.landing_zone.customer
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select * from telecom_catalog_assign.landing_zone.customer_new
+
+# COMMAND ----------
+
+spark.sql('select * from telecom_catalog_assign.landing_zone.customer_new').write.mode('append').option("mergeSchema",True).saveAsTable("telecom_catalog_assign.landing_zone.customer")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ##16. Do a final exercise of defining one/two liner of... 
+# MAGIC 1. When to use/benifits csv
+# MAGIC 2. When to use/benifits json
+# MAGIC 3. When to use/benifit orc
+# MAGIC 4. When to use/benifit parquet
+# MAGIC 5. When to use/benifit delta
+# MAGIC 6. When to use/benifit xml
+# MAGIC 7. When to use/benifit delta tables
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC **CSV**
+# MAGIC Use for simple, flat data exchange.
+# MAGIC Human-readable but large, slow, and no schema support.
+# MAGIC
+# MAGIC **JSON**
+# MAGIC
+# MAGIC Use for semi-structured or nested data (APIs, logs).
+# MAGIC Flexible schema but slower and larger than columnar formats.
+# MAGIC
+# MAGIC **ORC**
+# MAGIC
+# MAGIC Use for Hive-based analytical workloads.
+# MAGIC Highly compressed, columnar, and efficient for aggregations.
+# MAGIC
+# MAGIC **Parquet**
+# MAGIC
+# MAGIC Use for analytics and big data processing.
+# MAGIC Columnar, compressed, fast reads, but no ACID guarantees.
+# MAGIC
+# MAGIC **Delta (files)**
+# MAGIC
+# MAGIC Use for reliable data lakes with updates.
+# MAGIC Adds ACID, schema enforcement, and time travel on Parquet.
+# MAGIC
+# MAGIC **XML**
+# MAGIC
+# MAGIC Use for legacy or enterprise systems.
+# MAGIC Supports hierarchy but verbose and slow to process.
+# MAGIC
+# MAGIC **Delta Tables**
+# MAGIC
+# MAGIC Use for production, governed analytics in Databricks.
+# MAGIC Delta files + catalog metadata, permissions, and lineage.
