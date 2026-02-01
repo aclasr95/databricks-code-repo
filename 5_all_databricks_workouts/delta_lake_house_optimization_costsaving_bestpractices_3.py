@@ -269,10 +269,10 @@
 
 # COMMAND ----------
 
-# not sure why this is not working
-%sql
-RESTORE TABLE logistics_job_project.landing_schema.gold_core_curated_tbl
-TO TIMESTAMP AS OF current_timestamp() - INTERVAL 15 MINUTES;
+# MAGIC %sql
+# MAGIC -- not sure why this is not working
+# MAGIC RESTORE TABLE logistics_job_project.landing_schema.gold_core_curated_tbl
+# MAGIC TO TIMESTAMP AS OF current_timestamp() - INTERVAL 15 MINUTES;
 
 # COMMAND ----------
 
